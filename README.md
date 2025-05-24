@@ -1,36 +1,135 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# Spendify - Personal Expense Tracker
 
-## Getting Started
+A modern, responsive web application built with Next.js and Supabase for tracking personal expenses with detailed analytics and insights.
 
-First, run the development server:
+## Features
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- **User Authentication**: Secure login/signup with Supabase Auth
+- **Expense Management**: Add, view, and categorize expenses
+- **Dynamic Categories**: Create custom expense categories
+- **Payment Methods**: Track different payment methods (UPI, Cash, Card, Bank Transfer)
+- **Analytics Dashboard**: Comprehensive insights with charts and visualizations
+- **Time Period Analysis**: Daily, weekly, monthly, yearly, and custom date range views
+- **Responsive Design**: Works seamlessly on desktop and mobile devices
+- **Modern UI**: Dark theme with accent colors and smooth animations
+
+## Tech Stack
+
+- **Frontend**: Next.js 14, React 18, Tailwind CSS
+- **Backend**: Supabase (PostgreSQL database, Authentication, Real-time)
+- **Charts**: Recharts for data visualization
+- **Icons**: Lucide React
+- **Date Handling**: date-fns
+
+## Database Schema
+
+### Categories Table
+```sql
+CREATE TABLE categories (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  usage_count INTEGER DEFAULT 0
+);
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Expenses Table
+```sql
+CREATE TABLE expenses (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  category_id UUID REFERENCES categories(id) ON DELETE CASCADE,
+  amount DECIMAL(10,2) NOT NULL,
+  expense_date TIMESTAMP WITH TIME ZONE NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  expense_method TEXT NOT NULL CHECK (expense_method IN ('upi', 'cash', 'card', 'bank_transfer'))
+);
+```
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+## Setup Instructions
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd spendify
+   ```
 
-## Learn More
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
 
-To learn more about Next.js, take a look at the following resources:
+3. **Set up Supabase**
+   - Create a new Supabase project
+   - Set up the database tables using the schema above
+   - Enable Row Level Security (RLS) and create appropriate policies
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+4. **Environment Variables**
+   Create a `.env.local` file:
+   ```
+   NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+   ```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+5. **Run the development server**
+   ```bash
+   npm run dev
+   ```
 
-## Deploy on Vercel
+6. **Open your browser**
+   Navigate to `http://localhost:3000`
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Key Features Explained
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Dashboard
+- Overview of monthly expenses, total transactions, and average expense
+- Recent expenses list with category and payment method details
+- Quick access to add new expenses
+
+### Expense Management
+- Add expenses with custom categories
+- Support for multiple payment methods
+- Date selection for backdated entries
+- Real-time category creation
+
+### Analytics & Insights
+- **Category Breakdown**: Pie chart showing spending distribution
+- **Spending Trend**: Line chart tracking expenses over time
+- **Payment Methods**: Bar chart of payment method usage
+- **Time Period Filters**: Daily, weekly, monthly, yearly, and custom ranges
+- **Summary Statistics**: Total amount, transaction count, averages
+
+### Responsive Design
+- Mobile-first approach
+- Adaptive layouts for different screen sizes
+- Touch-friendly interface elements
+- Optimized chart displays for mobile devices
+
+## Color Scheme
+- **Background**: #171223 (Dark purple)
+- **Secondary**: #1f1830 (Lighter purple)
+- **Accent**: #0ac7b8 (Teal/Cyan)
+- **Text**: White and gray variations
+
+## Security Features
+- Row Level Security (RLS) enabled
+- User-specific data isolation
+- Secure authentication with Supabase Auth
+- Protected routes and API calls
+
+## Performance Optimizations
+- React 18 features and optimizations
+- Efficient data fetching with Supabase
+- Optimized re-renders with proper state management
+- Lazy loading and code splitting
+
+## Contributing
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
+
+## License
+MIT License - see LICENSE file for details
