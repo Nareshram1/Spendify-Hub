@@ -1,0 +1,3 @@
+Add reset pwd logic from supabase side rm the old one
+able to delete expense and category
+daily need nav

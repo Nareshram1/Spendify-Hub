@@ -1,7 +1,18 @@
 "use client";
 import { useState, useEffect, useMemo } from 'react'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, PieChart, Pie, Cell, LineChart, Line, ResponsiveContainer, AreaChart, Area } from 'recharts'
-import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, subDays, subWeeks, subMonths, subYears, addDays, addWeeks, addMonths, addYears, isAfter, isBefore } from 'date-fns'
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
+  PieChart, Pie, Cell,
+  LineChart, Line,
+  ResponsiveContainer,
+  AreaChart, Area
+} from 'recharts'
+import {
+  format, startOfWeek, endOfWeek, startOfMonth, endOfMonth,
+  startOfYear, endOfYear,
+  subDays, subWeeks, subMonths, subYears,
+  addDays, addWeeks, addMonths, addYears,
+} from 'date-fns'
 import { getExpenses } from '../lib/database'
 
 const COLORS = ['#0ac7b8', '#8884d8', '#82ca9d', '#ffc658', '#ff7300', '#8dd1e1', '#d084d0', '#ffb347']
@@ -14,720 +25,271 @@ export default function ExpenseInsights({ user }) {
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [selectedMethod, setSelectedMethod] = useState('all')
   const [loading, setLoading] = useState(true)
-  const [viewMode, setViewMode] = useState('overview') // overview, categories, trends, compare
-  const [comparisonPeriod, setComparisonPeriod] = useState('previous')
-  const [chartType, setChartType] = useState('bar') // bar, line, area for trends
-  const [sortBy, setSortBy] = useState('amount') // amount, date, category
-  const [sortOrder, setSortOrder] = useState('desc') // asc, desc
-  const [selectedWeekOffset, setSelectedWeekOffset] = useState(0) // 0 = current week, -1 = last week, etc.
+  const [viewMode, setViewMode] = useState('overview')
+  const [chartType, setChartType] = useState('bar')
+  const [sortBy, setSortBy] = useState('amount')
+  const [sortOrder, setSortOrder] = useState('desc')
+  const [selectedWeekOffset, setSelectedWeekOffset] = useState(0)
   const [selectedMonthOffset, setSelectedMonthOffset] = useState(0)
   const [selectedYearOffset, setSelectedYearOffset] = useState(0)
 
-  useEffect(() => {
-    fetchExpenses()
-  }, [user, period, customStartDate, customEndDate, selectedWeekOffset, selectedMonthOffset, selectedYearOffset])
+  useEffect(() => { fetchExpenses() }, [user, period, customStartDate, customEndDate, selectedWeekOffset, selectedMonthOffset, selectedYearOffset])
 
   const fetchExpenses = async () => {
     setLoading(true)
     const { startDate, endDate } = getDateRange()
     const { data, error } = await getExpenses(user.id, startDate, endDate)
-    
-    if (!error && data) {
-      setExpenses(data)
-    }
+    if (!error && data) setExpenses(data)
     setLoading(false)
   }
 
   const getDateRange = () => {
     const now = new Date()
-    
     switch (period) {
-      case 'daily':
-        const selectedDay = subDays(now, Math.abs(selectedWeekOffset)) // Reusing offset for days
-        return {
-          startDate: format(selectedDay, 'yyyy-MM-dd'),
-          endDate: format(selectedDay, 'yyyy-MM-dd')
-        }
-      case 'weekly':
-        const weekStart = addWeeks(startOfWeek(now), selectedWeekOffset)
-        const weekEnd = addWeeks(endOfWeek(now), selectedWeekOffset)
-        return {
-          startDate: format(weekStart, 'yyyy-MM-dd'),
-          endDate: format(weekEnd, 'yyyy-MM-dd')
-        }
-      case 'monthly':
-        const monthStart = addMonths(startOfMonth(now), selectedMonthOffset)
-        const monthEnd = addMonths(endOfMonth(now), selectedMonthOffset)
-        return {
-          startDate: format(monthStart, 'yyyy-MM-dd'),
-          endDate: format(monthEnd, 'yyyy-MM-dd')
-        }
-      case 'yearly':
-        const yearStart = addYears(startOfYear(now), selectedYearOffset)
-        const yearEnd = addYears(endOfYear(now), selectedYearOffset)
-        return {
-          startDate: format(yearStart, 'yyyy-MM-dd'),
-          endDate: format(yearEnd, 'yyyy-MM-dd')
-        }
-      case 'custom':
-        return {
-          startDate: customStartDate,
-          endDate: customEndDate
-        }
-      default:
-        return { startDate: null, endDate: null }
+      case 'daily': {
+        const day = addDays(now, selectedWeekOffset)
+        return { startDate: format(day,'yyyy-MM-dd'), endDate: format(day,'yyyy-MM-dd') }
+      }
+      case 'weekly': {
+        const start = addWeeks(startOfWeek(now), selectedWeekOffset)
+        const end = addWeeks(endOfWeek(now), selectedWeekOffset)
+        return { startDate: format(start,'yyyy-MM-dd'), endDate: format(end,'yyyy-MM-dd') }
+      }
+      case 'monthly': {
+        const start = addMonths(startOfMonth(now), selectedMonthOffset)
+        const end = addMonths(endOfMonth(now), selectedMonthOffset)
+        return { startDate: format(start,'yyyy-MM-dd'), endDate: format(end,'yyyy-MM-dd') }
+      }
+      case 'yearly': {
+        const start = addYears(startOfYear(now), selectedYearOffset)
+        const end = addYears(endOfYear(now), selectedYearOffset)
+        return { startDate: format(start,'yyyy-MM-dd'), endDate: format(end,'yyyy-MM-dd') }
+      }
+      case 'custom': return { startDate: customStartDate, endDate: customEndDate }
+      default: return { startDate: null, endDate: null }
     }
   }
 
-  const getComparisonData = async () => {
-    const now = new Date()
-    let compStartDate, compEndDate
-    
-    switch (comparisonPeriod) {
-      case 'previous':
-        if (period === 'weekly') {
-          compStartDate = format(addWeeks(startOfWeek(now), selectedWeekOffset - 1), 'yyyy-MM-dd')
-          compEndDate = format(addWeeks(endOfWeek(now), selectedWeekOffset - 1), 'yyyy-MM-dd')
-        } else if (period === 'monthly') {
-          compStartDate = format(addMonths(startOfMonth(now), selectedMonthOffset - 1), 'yyyy-MM-dd')
-          compEndDate = format(addMonths(endOfMonth(now), selectedMonthOffset - 1), 'yyyy-MM-dd')
-        } else if (period === 'yearly') {
-          compStartDate = format(addYears(startOfYear(now), selectedYearOffset - 1), 'yyyy-MM-dd')
-          compEndDate = format(addYears(endOfYear(now), selectedYearOffset - 1), 'yyyy-MM-dd')
-        }
-        break
-      case 'lastYear':
-        const { startDate, endDate } = getDateRange()
-        const lastYearStart = subYears(new Date(startDate), 1)
-        const lastYearEnd = subYears(new Date(endDate), 1)
-        compStartDate = format(lastYearStart, 'yyyy-MM-dd')
-        compEndDate = format(lastYearEnd, 'yyyy-MM-dd')
-        break
-    }
-    
-    if (compStartDate && compEndDate) {
-      const { data } = await getExpenses(user.id, compStartDate, compEndDate)
-      return data || []
-    }
-    return []
-  }
-
-  const filteredExpenses = useMemo(() => {
-    return expenses.filter(expense => {
-      const categoryMatch = selectedCategory === 'all' || expense.categories?.name === selectedCategory
-      const methodMatch = selectedMethod === 'all' || expense.expense_method === selectedMethod
-      return categoryMatch && methodMatch
-    })
-  }, [expenses, selectedCategory, selectedMethod])
+  const filteredExpenses = useMemo(() => expenses.filter(e =>
+    (selectedCategory === 'all' || e.categories?.name === selectedCategory) &&
+    (selectedMethod === 'all' || e.expense_method === selectedMethod)
+  ), [expenses, selectedCategory, selectedMethod])
 
   const sortedExpenses = useMemo(() => {
     const sorted = [...filteredExpenses].sort((a, b) => {
-      let comparison = 0
-      
-      switch (sortBy) {
-        case 'amount':
-          comparison = a.amount - b.amount
-          break
-        case 'date':
-          comparison = new Date(a.expense_date) - new Date(b.expense_date)
-          break
-        case 'category':
-          comparison = (a.categories?.name || '').localeCompare(b.categories?.name || '')
-          break
-      }
-      
-      return sortOrder === 'desc' ? -comparison : comparison
+      let cmp = 0
+      if (sortBy === 'amount') cmp = a.amount - b.amount
+      if (sortBy === 'date') cmp = new Date(a.expense_date) - new Date(b.expense_date)
+      if (sortBy === 'category') cmp = (a.categories?.name||'').localeCompare(b.categories?.name||'')
+      return sortOrder === 'desc' ? -cmp : cmp
     })
-    
     return sorted
   }, [filteredExpenses, sortBy, sortOrder])
 
-  const analyticsData = useMemo(() => {
-    if (!filteredExpenses.length) return {
-      totalAmount: 0,
-      categoryData: [],
-      dailyData: [],
-      methodData: [],
-      weeklyData: [],
-      monthlyData: []
-    }
-
-    const totalAmount = filteredExpenses.reduce((sum, expense) => sum + expense.amount, 0)
-
-    // Category breakdown
-    const categoryMap = {}
-    filteredExpenses.forEach(expense => {
-      const categoryName = expense.categories?.name || 'Unknown'
-      categoryMap[categoryName] = (categoryMap[categoryName] || 0) + expense.amount
+  const analytics = useMemo(() => {
+    if (!filteredExpenses.length) return { total:0, category:[], daily:[], weekly:[], monthly:[], methods:[] }
+    const total = filteredExpenses.reduce((sum,e)=>sum+e.amount,0)
+    const catMap = {}, dayMap = {}, weekMap={}, monthMap={}, methodMap={}
+    filteredExpenses.forEach(e => {
+      const c = e.categories?.name||'Unknown'; catMap[c]=(catMap[c]||0)+e.amount
+      const d = format(new Date(e.expense_date),'yyyy-MM-dd'); dayMap[d]=(dayMap[d]||0)+e.amount
+      const w = format(startOfWeek(new Date(e.expense_date)),'yyyy-MM-dd'); weekMap[w]=(weekMap[w]||0)+e.amount
+      const m = format(new Date(e.expense_date),'yyyy-MM'); monthMap[m]=(monthMap[m]||0)+e.amount
+      const pm = e.expense_method||'Unknown'; methodMap[pm]=(methodMap[pm]||0)+e.amount
     })
-    
-    const categoryData = Object.entries(categoryMap)
-      .map(([name, value]) => ({
-        name,
-        value,
-        percentage: ((value / totalAmount) * 100).toFixed(1),
-        count: filteredExpenses.filter(e => (e.categories?.name || 'Unknown') === name).length
-      }))
-      .sort((a, b) => b.value - a.value)
-
-    // Daily spending trend
-    const dailyMap = {}
-    filteredExpenses.forEach(expense => {
-      const date = format(new Date(expense.expense_date), 'yyyy-MM-dd')
-      dailyMap[date] = (dailyMap[date] || 0) + expense.amount
-    })
-    
-    const dailyData = Object.entries(dailyMap)
-      .map(([date, amount]) => ({ 
-        date, 
-        amount,
-        formattedDate: format(new Date(date), 'MMM dd'),
-        count: filteredExpenses.filter(e => format(new Date(e.expense_date), 'yyyy-MM-dd') === date).length
-      }))
-      .sort((a, b) => new Date(a.date) - new Date(b.date))
-
-    // Weekly aggregation
-    const weeklyMap = {}
-    filteredExpenses.forEach(expense => {
-      const weekStart = format(startOfWeek(new Date(expense.expense_date)), 'yyyy-MM-dd')
-      weeklyMap[weekStart] = (weeklyMap[weekStart] || 0) + expense.amount
-    })
-    
-    const weeklyData = Object.entries(weeklyMap)
-      .map(([week, amount]) => ({ 
-        week: format(new Date(week), 'MMM dd'),
-        amount,
-        count: filteredExpenses.filter(e => 
-          format(startOfWeek(new Date(e.expense_date)), 'yyyy-MM-dd') === week
-        ).length
-      }))
-      .sort((a, b) => new Date(a.week) - new Date(b.week))
-
-    // Monthly aggregation
-    const monthlyMap = {}
-    filteredExpenses.forEach(expense => {
-      const month = format(new Date(expense.expense_date), 'yyyy-MM')
-      monthlyMap[month] = (monthlyMap[month] || 0) + expense.amount
-    })
-    
-    const monthlyData = Object.entries(monthlyMap)
-      .map(([month, amount]) => ({ 
-        month: format(new Date(month), 'MMM yyyy'),
-        amount,
-        count: filteredExpenses.filter(e => 
-          format(new Date(e.expense_date), 'yyyy-MM') === month
-        ).length
-      }))
-      .sort((a, b) => new Date(a.month) - new Date(b.month))
-
-    // Payment method breakdown
-    const methodMap = {}
-    filteredExpenses.forEach(expense => {
-      const method = expense.expense_method || 'Unknown'
-      methodMap[method] = (methodMap[method] || 0) + expense.amount
-    })
-    
-    const methodData = Object.entries(methodMap).map(([method, amount]) => ({
-      method: method.toUpperCase(),
-      amount,
-      percentage: ((amount / totalAmount) * 100).toFixed(1),
-      count: filteredExpenses.filter(e => (e.expense_method || 'Unknown') === method).length
-    }))
-
-    return {
-      totalAmount,
-      categoryData,
-      dailyData,
-      methodData,
-      weeklyData,
-      monthlyData
-    }
+    const catData = Object.entries(catMap).map(([name,val])=>({ name, value: val, pct:((val/total)*100).toFixed(1) }))
+    const daily = Object.entries(dayMap).map(([date,val])=>({ date: format(new Date(date),'MMM dd'), value: val }))
+    const weekly = Object.entries(weekMap).map(([w,val])=>({ week: format(new Date(w),'MMM dd'), value: val }))
+    const monthly = Object.entries(monthMap).map(([m,val])=>({ month: format(new Date(m+'-01'),'MMM yyyy'), value: val }))
+    const methods = Object.entries(methodMap).map(([name,val])=>({ method:name.toUpperCase(), value:val, pct:((val/total)*100).toFixed(1) }))
+    return { total, category: catData, daily, weekly, monthly, methods }
   }, [filteredExpenses])
 
-  const uniqueCategories = useMemo(() => {
-    const categories = [...new Set(expenses.map(e => e.categories?.name || 'Unknown'))]
-    return categories.sort()
-  }, [expenses])
+  const renderChart = (data, xKey, yKey, color) => (
+    <ResponsiveContainer width="100%" height={250}>
+      {chartType==='line' ? (
+        <LineChart data={data}>
+          <XAxis dataKey={xKey} /> <YAxis /> <CartesianGrid strokeDasharray="3 3" />
+          <Tooltip formatter={val=>`₹${val.toFixed(2)}`} />
+          <Line dataKey={yKey} stroke={color} strokeWidth={2} />
+        </LineChart>
+      ) : chartType==='area' ? (
+        <AreaChart data={data}>
+          <XAxis dataKey={xKey} /> <YAxis /> <CartesianGrid strokeDasharray="3 3" />
+          <Tooltip formatter={val=>`₹${val.toFixed(2)}`} />
+          <Area dataKey={yKey} stroke={color} fill={color} fillOpacity={0.3} />
+        </AreaChart>
+      ) : (
+        <BarChart data={data}>
+          <XAxis dataKey={xKey} /> <YAxis /> <CartesianGrid strokeDasharray="3 3" />
+          <Tooltip formatter={val=>`₹${val.toFixed(2)}`} />
+          <Bar dataKey={yKey} fill={color} />
+        </BarChart>
+      )}
+    </ResponsiveContainer>
+  )
 
-  const uniqueMethods = useMemo(() => {
-    const methods = [...new Set(expenses.map(e => e.expense_method || 'Unknown'))]
-    return methods.sort()
-  }, [expenses])
-
-  const getPeriodNavigationText = () => {
-    const now = new Date()
-    switch (period) {
-      case 'weekly':
-        const weekStart = addWeeks(startOfWeek(now), selectedWeekOffset)
-        return format(weekStart, 'MMM dd, yyyy')
-      case 'monthly':
-        const month = addMonths(now, selectedMonthOffset)
-        return format(month, 'MMMM yyyy')
-      case 'yearly':
-        const year = addYears(now, selectedYearOffset)
-        return format(year, 'yyyy')
-      default:
-        return ''
-    }
-  }
-
-  const renderChart = (data, dataKey, color = '#0ac7b8') => {
-    const ChartComponent = chartType === 'line' ? LineChart : 
-                          chartType === 'area' ? AreaChart : BarChart
-
-    return (
-      <ResponsiveContainer width="100%" height={300}>
-        <ChartComponent data={data}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-          <XAxis dataKey={Object.keys(data[0] || {})[0]} stroke="#9CA3AF" />
-          <YAxis stroke="#9CA3AF" />
-          <Tooltip 
-            formatter={(value) => [`₹${value.toFixed(2)}`, 'Amount']}
-            contentStyle={{ backgroundColor: '#1f1830', border: '1px solid #374151' }}
-          />
-          {chartType === 'line' && <Line type="monotone" dataKey={dataKey} stroke={color} strokeWidth={2} />}
-          {chartType === 'area' && <Area type="monotone" dataKey={dataKey} stroke={color} fill={color} fillOpacity={0.3} />}
-          {chartType === 'bar' && <Bar dataKey={dataKey} fill={color} />}
-        </ChartComponent>
-      </ResponsiveContainer>
-    )
-  }
-
-  if (loading) {
-    return (
-      <div className="bg-secondary rounded-lg p-6">
-        <div className="animate-pulse">
-          <div className="h-4 bg-gray-600 rounded w-1/4 mb-4"></div>
-          <div className="h-64 bg-gray-600 rounded"></div>
-        </div>
-      </div>
-    )
-  }
+  if (loading) return (
+    <div className="p-4 animate-pulse">
+      <div className="h-6 bg-gray-600 rounded mb-2 w-1/3"></div>
+      <div className="h-48 bg-gray-600 rounded"></div>
+    </div>
+  )
 
   return (
-    <div className="space-y-6">
-      {/* Enhanced Control Panel */}
+    <div className="space-y-6 p-2 sm:p-4 lg:p-6">
+      {/* Control Panel */}
       <div className="bg-secondary rounded-lg p-4 space-y-4">
-        {/* Period Selector with Navigation */}
-        <div className="flex flex-wrap items-center gap-4">
-          <div className="flex gap-2">
-            {['daily', 'weekly', 'monthly', 'yearly', 'custom'].map((p) => (
-              <button
-                key={p}
-                onClick={() => setPeriod(p)}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                  period === p
-                    ? 'bg-accent text-white'
-                    : 'bg-primary text-gray-300 hover:text-white'
-                }`}
-              >
-                {p.charAt(0).toUpperCase() + p.slice(1)}
-              </button>
-            ))}
-          </div>
-
-          {/* Period Navigation */}
-          {['weekly', 'monthly', 'yearly'].includes(period) && (
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => {
-                  if (period === 'weekly') setSelectedWeekOffset(selectedWeekOffset - 1)
-                  if (period === 'monthly') setSelectedMonthOffset(selectedMonthOffset - 1)
-                  if (period === 'yearly') setSelectedYearOffset(selectedYearOffset - 1)
-                }}
-                className="px-3 py-1 bg-primary text-gray-300 hover:text-white rounded text-sm"
-              >
-                ←
-              </button>
-              <span className="text-white font-medium min-w-[120px] text-center">
-                {getPeriodNavigationText()}
-              </span>
-              <button
-                onClick={() => {
-                  if (period === 'weekly') setSelectedWeekOffset(selectedWeekOffset + 1)
-                  if (period === 'monthly') setSelectedMonthOffset(selectedMonthOffset + 1)
-                  if (period === 'yearly') setSelectedYearOffset(selectedYearOffset + 1)
-                }}
-                className="px-3 py-1 bg-primary text-gray-300 hover:text-white rounded text-sm"
-              >
-                →
-              </button>
-              <button
-                onClick={() => {
-                  setSelectedWeekOffset(0)
-                  setSelectedMonthOffset(0)
-                  setSelectedYearOffset(0)
-                }}
-                className="px-3 py-1 bg-accent text-white rounded text-sm ml-2"
-              >
-                Today
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* Custom Date Range */}
-        {period === 'custom' && (
-          <div className="flex gap-4">
-            <div>
-              <label className="block text-sm text-gray-300 mb-1">Start Date</label>
-              <input
-                type="date"
-                value={customStartDate}
-                onChange={(e) => setCustomStartDate(e.target.value)}
-                className="px-3 py-2 bg-primary border border-gray-600 rounded-md text-white text-sm"
-              />
-            </div>
-            <div>
-              <label className="block text-sm text-gray-300 mb-1">End Date</label>
-              <input
-                type="date"
-                value={customEndDate}
-                onChange={(e) => setCustomEndDate(e.target.value)}
-                className="px-3 py-2 bg-primary border border-gray-600 rounded-md text-white text-sm"
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Filters and View Options */}
-        <div className="flex flex-wrap gap-4">
-          {/* Category Filter */}
-          <div>
-            <label className="block text-sm text-gray-300 mb-1">Category</label>
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="px-3 py-2 bg-primary border border-gray-600 rounded-md text-white text-sm"
-            >
-              <option value="all">All Categories</option>
-              {uniqueCategories.map(cat => (
-                <option key={cat} value={cat}>{cat}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Payment Method Filter */}
-          <div>
-            <label className="block text-sm text-gray-300 mb-1">Payment Method</label>
-            <select
-              value={selectedMethod}
-              onChange={(e) => setSelectedMethod(e.target.value)}
-              className="px-3 py-2 bg-primary border border-gray-600 rounded-md text-white text-sm"
-            >
-              <option value="all">All Methods</option>
-              {uniqueMethods.map(method => (
-                <option key={method} value={method}>{method.toUpperCase()}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Chart Type Selector */}
-          <div>
-            <label className="block text-sm text-gray-300 mb-1">Chart Type</label>
-            <select
-              value={chartType}
-              onChange={(e) => setChartType(e.target.value)}
-              className="px-3 py-2 bg-primary border border-gray-600 rounded-md text-white text-sm"
-            >
-              <option value="bar">Bar Chart</option>
-              <option value="line">Line Chart</option>
-              <option value="area">Area Chart</option>
-            </select>
-          </div>
-
-          {/* Sort Options */}
-          <div>
-            <label className="block text-sm text-gray-300 mb-1">Sort By</label>
-            <select
-              value={`${sortBy}-${sortOrder}`}
-              onChange={(e) => {
-                const [by, order] = e.target.value.split('-')
-                setSortBy(by)
-                setSortOrder(order)
-              }}
-              className="px-3 py-2 bg-primary border border-gray-600 rounded-md text-white text-sm"
-            >
-              <option value="amount-desc">Amount (High to Low)</option>
-              <option value="amount-asc">Amount (Low to High)</option>
-              <option value="date-desc">Date (Newest First)</option>
-              <option value="date-asc">Date (Oldest First)</option>
-              <option value="category-asc">Category (A-Z)</option>
-              <option value="category-desc">Category (Z-A)</option>
-            </select>
-          </div>
-        </div>
-
-        {/* View Mode Selector */}
-        <div className="flex gap-2">
-          {['overview', 'categories', 'trends', 'methods'].map((mode) => (
-            <button
-              key={mode}
-              onClick={() => setViewMode(mode)}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                viewMode === mode
-                  ? 'bg-accent text-white'
-                  : 'bg-primary text-gray-300 hover:text-white'
-              }`}
-            >
-              {mode.charAt(0).toUpperCase() + mode.slice(1)}
+        <div className="flex overflow-x-auto space-x-2 sm:space-x-4 py-1">
+          {['daily','weekly','monthly','yearly','custom'].map(p => (
+            <button key={p} onClick={()=>setPeriod(p)} className={`flex-shrink-0 px-3 py-1 text-sm font-medium rounded ${period===p?'bg-accent text-white':'bg-primary text-gray-300'}`}> 
+              {p.charAt(0).toUpperCase()+p.slice(1)}
             </button>
           ))}
         </div>
+        {['weekly','monthly','yearly'].includes(period) && (
+          <div className="flex items-center justify-between text-sm">
+            <button onClick={()=> period==='weekly'?setSelectedWeekOffset(o=>o-1) : period==='monthly'?setSelectedMonthOffset(o=>o-1):setSelectedYearOffset(o=>o-1)} className="px-2">←</button>
+            <span>{period==='weekly'?format(addWeeks(startOfWeek(new Date()),selectedWeekOffset),'MMM dd, yyyy'):period==='monthly'?format(addMonths(new Date(),selectedMonthOffset),'MMMM yyyy'):format(addYears(new Date(),selectedYearOffset),'yyyy')}</span>
+            <button onClick={()=> period==='weekly'?setSelectedWeekOffset(o=>o+1) : period==='monthly'?setSelectedMonthOffset(o=>o+1):setSelectedYearOffset(o=>o+1)} className="px-2">→</button>
+            <button onClick={()=>{setSelectedWeekOffset(0);setSelectedMonthOffset(0);setSelectedYearOffset(0)}} className="px-2 bg-accent text-white rounded">Today</button>
+          </div>
+        )}
+        {period==='custom' && (
+          <div className="flex flex-col sm:flex-row gap-2">
+            <input type="date" value={customStartDate} onChange={e=>setCustomStartDate(e.target.value)} className="flex-1 px-2 py-1 bg-primary border rounded text-sm text-white" />
+            <input type="date" value={customEndDate} onChange={e=>setCustomEndDate(e.target.value)} className="flex-1 px-2 py-1 bg-primary border rounded text-sm text-white" />
+          </div>
+        )}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <select value={selectedCategory} onChange={e=>setSelectedCategory(e.target.value)} className="px-2 py-1 bg-primary border rounded text-sm text-white">
+            <option value="all">All Categories</option>
+            {expenses.map(e=>e.categories?.name).filter((v,i,a)=>v&&a.indexOf(v)===i).map(cat=><option key={cat} value={cat}>{cat}</option>)}
+          </select>
+          <select value={selectedMethod} onChange={e=>setSelectedMethod(e.target.value)} className="px-2 py-1 bg-primary border rounded text-sm text-white">
+            <option value="all">All Methods</option>
+            {expenses.map(e=>e.expense_method).filter((v,i,a)=>v&&a.indexOf(v)===i).map(m=><option key={m} value={m}>{m.toUpperCase()}</option>)}
+          </select>
+          <select value={chartType} onChange={e=>setChartType(e.target.value)} className="px-2 py-1 bg-primary border rounded text-sm text-white">
+            <option value="bar">Bar</option><option value="line">Line</option><option value="area">Area</option>
+          </select>
+          <select value={`${sortBy}-${sortOrder}`} onChange={e=>{const [b,o]=e.target.value.split('-');setSortBy(b);setSortOrder(o)}} className="px-2 py-1 bg-primary border rounded text-sm text-white">
+            <option value="amount-desc">Amt ↓</option><option value="amount-asc">Amt ↑</option>
+            <option value="date-desc">Date ↓</option><option value="date-asc">Date ↑</option>
+            <option value="category-asc">Cat A-Z</option><option value="category-desc">Cat Z-A</option>
+          </select>
+        </div>
+        <div className="flex space-x-2 overflow-x-auto">
+          {['overview','categories','trends','methods'].map(m=>
+            <button key={m} onClick={()=>setViewMode(m)} className={`flex-shrink-0 px-3 py-1 text-sm rounded ${viewMode===m?'bg-accent text-white':'bg-primary text-gray-300'}`}>{m.charAt(0).toUpperCase()+m.slice(1)}</button>
+          )}
+        </div>
       </div>
 
-      {/* Enhanced Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-secondary rounded-lg p-6">
-          <h3 className="text-sm font-medium text-gray-400 mb-2">Total Expenses</h3>
-          <p className="text-3xl font-bold text-white">₹{analyticsData.totalAmount.toFixed(2)}</p>
-          <p className="text-sm text-gray-400 mt-1">
-            {filteredExpenses.length !== expenses.length && `Filtered: ${filteredExpenses.length} of ${expenses.length}`}
-          </p>
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-secondary rounded-lg p-4 text-center">
+          <div className="text-sm text-gray-400">Total</div>
+          <div className="text-xl font-bold">₹{analytics.total.toFixed(2)}</div>
         </div>
-        <div className="bg-secondary rounded-lg p-6">
-          <h3 className="text-sm font-medium text-gray-400 mb-2">Total Transactions</h3>
-          <p className="text-3xl font-bold text-white">{filteredExpenses.length}</p>
-          <p className="text-sm text-gray-400 mt-1">
-            {analyticsData.categoryData.length} categories
-          </p>
+        <div className="bg-secondary rounded-lg p-4 text-center">
+          <div className="text-sm text-gray-400">Transactions</div>
+          <div className="text-xl font-bold">{filteredExpenses.length}</div>
         </div>
-        <div className="bg-secondary rounded-lg p-6">
-          <h3 className="text-sm font-medium text-gray-400 mb-2">Average Transaction</h3>
-          <p className="text-3xl font-bold text-white">
-            ₹{filteredExpenses.length > 0 ? (analyticsData.totalAmount / filteredExpenses.length).toFixed(2) : '0.00'}
-          </p>
+        <div className="bg-secondary rounded-lg p-4 text-center">
+          <div className="text-sm text-gray-400">Avg</div>
+          <div className="text-xl font-bold">₹{filteredExpenses.length? (analytics.total/filteredExpenses.length).toFixed(2):'0.00'}</div>
         </div>
-        <div className="bg-secondary rounded-lg p-6">
-          <h3 className="text-sm font-medium text-gray-400 mb-2">Top Category</h3>
-          <p className="text-xl font-bold text-white">
-            {analyticsData.categoryData[0]?.name || 'N/A'}
-          </p>
-          <p className="text-sm text-gray-400">
-            ₹{analyticsData.categoryData[0]?.value.toFixed(2) || '0.00'} ({analyticsData.categoryData[0]?.percentage || '0'}%)
-          </p>
+        <div className="bg-secondary rounded-lg p-4 text-center">
+          <div className="text-sm text-gray-400">Top Cat</div>
+          <div className="text-xl font-bold">{analytics.category[0]?.name||'N/A'}</div>
         </div>
       </div>
 
-      {/* Dynamic Content Based on View Mode */}
-      {viewMode === 'overview' && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-secondary rounded-lg p-6">
-            <h3 className="text-lg font-semibold text-white mb-4">Spending by Category</h3>
-            {analyticsData.categoryData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
+      {/* Charts */}
+      {viewMode==='overview' && (
+        <div className="space-y-4">
+          <div className="bg-secondary rounded-lg p-4">
+            <div className="text-lg text-white mb-2">By Category</div>
+            {analytics.category.length?
+              <ResponsiveContainer width="100%" height={200}>
                 <PieChart>
-                  <Pie
-                    data={analyticsData.categoryData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, percentage }) => `${name} (${percentage}%)`}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {analyticsData.categoryData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
+                  <Pie data={analytics.category} dataKey="value" cx="50%" cy="50%" outerRadius={60} label={({name,pct})=>`${name} (${pct}%)`}>
+                    {analytics.category.map((_,i)=><Cell key={i} fill={COLORS[i%COLORS.length]} />)}
                   </Pie>
-                  <Tooltip formatter={(value) => [`₹${value.toFixed(2)}`, 'Amount']} />
+                  <Tooltip formatter={v=>`₹${v.toFixed(2)}`} />
                 </PieChart>
               </ResponsiveContainer>
-            ) : (
-              <div className="h-64 flex items-center justify-center text-gray-400">
-                No data available
-              </div>
-            )}
+            : <div className="h-32 text-gray-400 flex items-center justify-center">No data</div>}
           </div>
-
-          <div className="bg-secondary rounded-lg p-6">
-            <h3 className="text-lg font-semibold text-white mb-4">Daily Spending Trend</h3>
-            {analyticsData.dailyData.length > 0 ? (
-              renderChart(analyticsData.dailyData, 'amount')
-            ) : (
-              <div className="h-64 flex items-center justify-center text-gray-400">
-                No data available
-              </div>
-            )}
+          <div className="bg-secondary rounded-lg p-4">
+            <div className="text-lg text-white mb-2">Daily Trend</div>
+            {analytics.daily.length? renderChart(analytics.daily,'date','value',COLORS[0])
+            : <div className="h-32 text-gray-400 flex items-center justify-center">No data</div>}
           </div>
         </div>
       )}
 
-      {viewMode === 'categories' && (
-        <div className="space-y-6">
-          <div className="bg-secondary rounded-lg p-6">
-            <h3 className="text-lg font-semibold text-white mb-4">Category Breakdown</h3>
-            <div className="space-y-4">
-              {analyticsData.categoryData.map((category, index) => (
-                <div key={category.name} className="flex items-center justify-between p-3 bg-primary rounded">
-                  <div className="flex items-center gap-3">
-                    <div 
-                      className="w-4 h-4 rounded-full"
-                      style={{ backgroundColor: COLORS[index % COLORS.length] }}
-                    ></div>
-                    <div>
-                      <p className="text-white font-medium">{category.name}</p>
-                      <p className="text-sm text-gray-400">{category.count} transactions</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-white font-semibold">₹{category.value.toFixed(2)}</p>
-                    <p className="text-sm text-gray-400">{category.percentage}%</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {viewMode === 'trends' && (
-        <div className="space-y-6">
-          <div className="bg-secondary rounded-lg p-6">
-            <h3 className="text-lg font-semibold text-white mb-4">Spending Trends</h3>
-            {analyticsData.dailyData.length > 0 ? (
-              renderChart(analyticsData.dailyData, 'amount')
-            ) : (
-              <div className="h-64 flex items-center justify-center text-gray-400">
-                No data available
+      {viewMode==='categories' && (
+        <div className="bg-secondary rounded-lg p-4 space-y-2">
+          {analytics.category.map((c,i)=>(
+            <div key={c.name} className="flex justify-between items-center">
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 rounded-full" style={{backgroundColor:COLORS[i%COLORS.length]}} />
+                <div>{c.name}</div>
               </div>
-            )}
-          </div>
-          
-          {analyticsData.weeklyData.length > 1 && (
-            <div className="bg-secondary rounded-lg p-6">
-              <h3 className="text-lg font-semibold text-white mb-4">Weekly Trends</h3>
-              {renderChart(analyticsData.weeklyData, 'amount', '#8884d8')}
-            </div>
-          )}
-          
-          {analyticsData.monthlyData.length > 1 && (
-            <div className="bg-secondary rounded-lg p-6">
-              <h3 className="text-lg font-semibold text-white mb-4">Monthly Trends</h3>
-              {renderChart(analyticsData.monthlyData, 'amount', '#82ca9d')}
-            </div>
-          )}
-        </div>
-      )}
-
-      {viewMode === 'methods' && (
-        <div className="space-y-6">
-          <div className="bg-secondary rounded-lg p-6">
-            <h3 className="text-lg font-semibold text-white mb-4">Payment Methods</h3>
-            {analyticsData.methodData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={analyticsData.methodData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                  <XAxis dataKey="method" stroke="#9CA3AF" />
-                  <YAxis stroke="#9CA3AF" />
-                  <Tooltip 
-                    formatter={(value) => [`₹${value.toFixed(2)}`, 'Amount']}
-                    contentStyle={{ backgroundColor: '#1f1830', border: '1px solid #374151' }}
-                  />
-                  <Bar dataKey="amount" fill="#0ac7b8" />
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-64 flex items-center justify-center text-gray-400">
-                No data available
-              </div>
-            )}
-          </div>
-          
-          <div className="bg-secondary rounded-lg p-6">
-            <h3 className="text-lg font-semibold text-white mb-4">Payment Method Details</h3>
-            <div className="space-y-3">
-              {analyticsData.methodData.map((method, index) => (
-                <div key={method.method} className="flex items-center justify-between p-3 bg-primary rounded">
-                  <div>
-                    <p className="text-white font-medium">{method.method}</p>
-                    <p className="text-sm text-gray-400">{method.count} transactions</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-white font-semibold">₹{method.amount.toFixed(2)}</p>
-                    <p className="text-sm text-gray-400">{method.percentage}%</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Enhanced Recent Expenses List */}
-      <div className="bg-secondary rounded-lg p-6">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold text-white">
-            Recent Expenses 
-            {(selectedCategory !== 'all' || selectedMethod !== 'all') && 
-              <span className="text-sm text-gray-400 ml-2">(Filtered)</span>
-            }
-          </h3>
-          <p className="text-sm text-gray-400">
-            Showing {Math.min(20, sortedExpenses.length)} of {sortedExpenses.length} expenses
-          </p>
-        </div>
-        <div className="space-y-3 max-h-96 overflow-y-auto">
-          {sortedExpenses.slice(0, 20).map((expense) => (
-            <div key={expense.id} className="flex justify-between items-center py-3 px-4 bg-primary rounded-lg hover:bg-opacity-80 transition-colors">
-              <div className="flex-1">
-                <div className="flex items-center gap-3">
-                  <div className="flex-1">
-                    <p className="text-white font-medium">{expense.categories?.name || 'Unknown'}</p>
-                    <p className="text-sm text-gray-400">
-                      {format(new Date(expense.expense_date), 'MMM dd, yyyy')} • {expense.expense_method?.toUpperCase() || 'Unknown'}
-                    </p>
-                    {expense.description && (
-                      <p className="text-xs text-gray-500 mt-1">{expense.description}</p>
-                    )}
-                  </div>
-                </div>
-              </div>
-              <div className="text-right">
-                <p className="text-accent font-semibold text-lg">₹{expense.amount.toFixed(2)}</p>
-              </div>
+              <div>₹{c.value.toFixed(2)} ({c.pct}%)</div>
             </div>
           ))}
-          {sortedExpenses.length === 0 && (
-            <div className="text-center text-gray-400 py-8">
-              No expenses found for the selected filters and period
+        </div>
+      )}
+
+      {viewMode==='trends' && (
+        <div className="space-y-4">
+          {renderChart(analytics.daily,'date','value',COLORS[0])}
+          {analytics.weekly.length>1 && renderChart(analytics.weekly,'week','value',COLORS[1])}
+          {analytics.monthly.length>1 && renderChart(analytics.monthly,'month','value',COLORS[2])}
+        </div>
+      )}
+
+      {viewMode==='methods' && (
+        <div className="space-y-4">
+          <div className="bg-secondary rounded-lg p-4">
+            {analytics.methods.length? renderChart(
+              analytics.methods,'method','value',COLORS[3]
+            ) : <div className="h-32 text-gray-400 flex items-center justify-center">No data</div>}
+          </div>
+          <div className="bg-secondary rounded-lg p-4 space-y-2">
+            {analytics.methods.map(m=>(
+              <div key={m.method} className="flex justify-between">
+                <div>{m.method}</div>
+                <div>₹{m.value.toFixed(2)} ({m.pct}%)</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Recent List */}
+      <div className="bg-secondary rounded-lg p-4">
+        <div className="flex justify-between items-center mb-2 text-sm text-gray-300">
+          <div>Recent Expenses {selectedCategory!=='all'||selectedMethod!=='all'? '(Filtered)' : ''}</div>
+          <div>Showing {Math.min(10,sortedExpenses.length)}/{sortedExpenses.length}</div>
+        </div>
+        <div className="space-y-1 max-h-64 overflow-y-auto">
+          {sortedExpenses.slice(0,10).map(e=> (
+            <div key={e.id} className="flex justify-between p-2 bg-primary rounded">
+              <div>
+                <div className="font-medium text-white">{e.categories?.name||'Unknown'}</div>
+                <div className="text-xs text-gray-400">{format(new Date(e.expense_date),'MMM dd')} • {e.expense_method?.toUpperCase()}</div>
+              </div>
+              <div className="font-semibold text-accent">₹{e.amount.toFixed(2)}</div>
             </div>
-          )}
+          ))}
+          {!sortedExpenses.length && <div className="text-center text-gray-400 py-4">No expenses</div>}
         </div>
       </div>
 
-      {/* Quick Stats Footer */}
-      {filteredExpenses.length > 0 && (
-        <div className="bg-secondary rounded-lg p-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-            <div>
-              <p className="text-2xl font-bold text-accent">
-                ₹{Math.max(...filteredExpenses.map(e => e.amount)).toFixed(2)}
-              </p>
-              <p className="text-sm text-gray-400">Highest Expense</p>
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-accent">
-                ₹{Math.min(...filteredExpenses.map(e => e.amount)).toFixed(2)}
-              </p>
-              <p className="text-sm text-gray-400">Lowest Expense</p>
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-accent">
-                {analyticsData.categoryData.length}
-              </p>
-              <p className="text-sm text-gray-400">Categories Used</p>
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-accent">
-                {new Set(filteredExpenses.map(e => format(new Date(e.expense_date), 'yyyy-MM-dd'))).size}
-              </p>
-              <p className="text-sm text-gray-400">Days with Expenses</p>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
