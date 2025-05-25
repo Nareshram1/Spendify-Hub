@@ -1,19 +1,17 @@
 "use client";
 import { useState, useEffect } from 'react';
-import { Plus, LogOut, TrendingUp, DollarSign, Calendar, Filter, Search, Download, BarChart3, PieChart, RefreshCw, Edit3, Trash2, X } from 'lucide-react'; // Added Edit3, Trash2, X
+import { Plus, LogOut, TrendingUp, DollarSign, Calendar, Search, Download, BarChart3, PieChart, RefreshCw, Edit3, Trash2, X } from 'lucide-react';
 import { signOut, getCurrentUser } from '../lib/auth';
-import { getExpenses, deleteExpense as deleteExpenseFromDB } from '../lib/database'; // Renamed to avoid conflict
+import { getExpenses, deleteExpense as deleteExpenseFromDB } from '../lib/database';
 import ExpenseForm from './ExpenseForm';
 import ExpenseInsights from './ExpenseInsights';
-
-// StatCard remains the same
 
 function StatCard({ title, value, icon: Icon, trend, trendValue }) {
   return (
     <div className="bg-secondary rounded-2xl p-4 md:p-6 shadow-sm hover:shadow-md transition">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3 md:gap-4">
-          <div className="p-2 md:p-3 bg-accent/20 rounded-xl">
+          <div className="p-2 md:p-3 bg-accent/20 rounded-xl flex-shrink-0">
             <Icon className="w-5 h-5 md:w-6 md:h-6 text-accent" />
           </div>
           <div>
@@ -31,7 +29,6 @@ function StatCard({ title, value, icon: Icon, trend, trendValue }) {
     </div>
   );
 }
-
 
 function ExpenseItem({ expense, onEdit, onDelete }) {
   const formatDate = (dateString) => {
@@ -58,7 +55,6 @@ function ExpenseItem({ expense, onEdit, onDelete }) {
     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 bg-primary rounded-xl hover:bg-primary/80 transition group">
       <div className="flex items-center space-x-3 sm:space-x-4 mb-3 sm:mb-0 flex-grow">
         <div className="w-10 h-10 bg-accent/20 rounded-lg flex items-center justify-center flex-shrink-0">
-          {/* You might want a dynamic icon based on category later */}
           <DollarSign className="w-5 h-5 text-accent" />
         </div>
         <div className="flex-grow">
@@ -77,8 +73,7 @@ function ExpenseItem({ expense, onEdit, onDelete }) {
         <div className="text-right">
           <p className="text-base sm:text-lg font-semibold text-white">₹{typeof expense.amount === 'number' ? expense.amount.toFixed(2) : '0.00'}</p>
         </div>
-        {/* On mobile, buttons could be always visible or revealed on tap (more complex) */}
-        <div className="flex gap-1 sm:gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+        <div className="flex gap-1 sm:gap-2"> {/* Buttons always visible for mobile intuitiveness */}
           {onEdit && (
             <button 
               onClick={() => onEdit(expense)} 
@@ -105,23 +100,26 @@ function ExpenseItem({ expense, onEdit, onDelete }) {
 
 function DateRangeFilter({ startDate, endDate, onStartDateChange, onEndDateChange, onClear }) {
   return (
-    <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4 bg-secondary/50 rounded-lg p-3 sm:p-4">
-      <Calendar className="w-5 h-5 text-gray-400 hidden sm:block" />
-      <div className="flex flex-col sm:flex-row items-center gap-2 w-full">
-        <input
-          type="date"
-          value={startDate}
-          onChange={(e) => onStartDateChange(e.target.value)}
-          className="bg-primary text-white rounded px-3 py-2 text-sm w-full sm:w-auto"
-        />
-        <span className="text-gray-400 hidden sm:inline">to</span>
-        <input
-          type="date"
-          value={endDate}
-          onChange={(e) => onEndDateChange(e.target.value)}
-          className="bg-primary text-white rounded px-3 py-2 text-sm w-full sm:w-auto"
-        />
-      </div>
+    <div className="flex flex-col sm:flex-row items-center gap-2 w-full">
+      <label htmlFor="startDate" className="sr-only">Start Date</label>
+      <input
+        id="startDate"
+        type="date"
+        value={startDate}
+        onChange={(e) => onStartDateChange(e.target.value)}
+        className="bg-primary text-white rounded px-3 py-2 text-sm w-full sm:w-auto focus:ring-accent focus:border-accent"
+        aria-label="Start Date"
+      />
+      <span className="text-gray-400 hidden sm:inline">to</span>
+      <label htmlFor="endDate" className="sr-only">End Date</label>
+      <input
+        id="endDate"
+        type="date"
+        value={endDate}
+        onChange={(e) => onEndDateChange(e.target.value)}
+        className="bg-primary text-white rounded px-3 py-2 text-sm w-full sm:w-auto focus:ring-accent focus:border-accent"
+        aria-label="End Date"
+      />
       {(startDate || endDate) && (
         <button
           onClick={onClear}
@@ -133,7 +131,6 @@ function DateRangeFilter({ startDate, endDate, onStartDateChange, onEndDateChang
     </div>
   );
 }
-
 
 export default function Dashboard({ onSignOut }) {
   const [user, setUser] = useState(null);
@@ -147,8 +144,8 @@ export default function Dashboard({ onSignOut }) {
   const [error, setError] = useState('');
   
   const [searchTerm, setSearchTerm] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
+  const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedMethod, setSelectedMethod] = useState('');
 
@@ -167,15 +164,13 @@ export default function Dashboard({ onSignOut }) {
     if (userError) {
         setError("Failed to get user session. Please try logging in again.");
         setLoading(false);
-        // Potentially call onSignOut() or redirect to login
         return;
     }
     setUser(currentUser);
     if (currentUser) {
       await fetchAllExpenses(currentUser.id);
     } else {
-        // No user session, potentially redirect to login or show login prompt
-        onSignOut?.(); // if onSignOut handles redirect to login
+        onSignOut?.();
     }
     setLoading(false);
   };
@@ -196,7 +191,7 @@ export default function Dashboard({ onSignOut }) {
   };
 
   const filterExpenses = () => {
-    let filtered = [...expenses]; // Create a copy to avoid mutating original state directly
+    let filtered = [...expenses];
 
     if (searchTerm) {
       filtered = filtered.filter(expense => 
@@ -233,15 +228,15 @@ export default function Dashboard({ onSignOut }) {
 
   const handleSignOut = async () => {
     await signOut();
-    setUser(null); // Clear user state
-    setExpenses([]); // Clear expenses
+    setUser(null);
+    setExpenses([]);
     if (onSignOut) onSignOut();
   };
 
-  const handleExpenseFormSuccess = () => { // Renamed from handleExpenseAdded for clarity
+  const handleExpenseFormSuccess = () => {
     setShowExpenseForm(false);
     setEditingExpense(null);
-    if (user) fetchAllExpenses(user.id); // Refresh expenses
+    if (user) fetchAllExpenses(user.id);
   };
 
   const handleEditExpense = (expense) => {
@@ -255,10 +250,8 @@ export default function Dashboard({ onSignOut }) {
       const { error: deleteError } = await deleteExpenseFromDB(expenseToDelete.id);
       if (deleteError) {
         setError(`Failed to delete expense: ${deleteError.message}`);
-        // Optionally, show a toast notification
       } else {
         setExpenses(prevExpenses => prevExpenses.filter(exp => exp.id !== expenseToDelete.id));
-        // Optionally, show a success toast
       }
     }
   };
@@ -314,7 +307,7 @@ export default function Dashboard({ onSignOut }) {
   });
 
   const today = new Date();
-  const startOfWeek = new Date(today.setDate(today.getDate() - today.getDay() + (today.getDay() === 0 ? -6 : 1) )); // Monday as start of week
+  const startOfWeek = new Date(today.setDate(today.getDate() - today.getDay() + (today.getDay() === 0 ? -6 : 1) ));
   startOfWeek.setHours(0,0,0,0);
   const endOfWeek = new Date(startOfWeek);
   endOfWeek.setDate(startOfWeek.getDate() + 6);
@@ -331,7 +324,7 @@ export default function Dashboard({ onSignOut }) {
   
   const monthlyTrendValue = lastMonthTotal !== 0 
     ? (((monthlyTotal - lastMonthTotal) / lastMonthTotal) * 100)
-    : (monthlyTotal > 0 ? 100 : 0); // If last month was 0, any spending is 100% increase
+    : (monthlyTotal > 0 ? 100 : 0);
 
   const monthlyTrendDirection = monthlyTotal === lastMonthTotal ? null : (monthlyTotal > lastMonthTotal ? 'up' : 'down');
   
@@ -346,7 +339,7 @@ export default function Dashboard({ onSignOut }) {
     return (
       <div className="min-h-screen bg-primary flex items-center justify-center text-white p-4 text-center">
         <RefreshCw size={32} className="animate-spin mr-3" />
-        Loading your financial dashboard...
+        <p className="text-lg">Loading your financial dashboard...</p>
       </div>
     );
   }
@@ -368,11 +361,9 @@ export default function Dashboard({ onSignOut }) {
   }
   
   if (!user) {
-     // This case should ideally be handled by redirecting to a login page via onSignOut
     return (
       <div className="min-h-screen bg-primary flex items-center justify-center text-white p-4 text-center">
         <p>No active session. Please log in.</p>
-        {/* Optionally, add a button that triggers `onSignOut` if it redirects to login */}
       </div>
     );
   }
@@ -481,13 +472,15 @@ export default function Dashboard({ onSignOut }) {
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <input
                     type="text"
-                    placeholder="Search amount, category, desc..."
+                    placeholder="Search amount, category, description..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="w-full bg-primary text-white rounded-lg pl-10 pr-4 py-2 text-sm focus:ring-accent focus:border-accent"
                   />
                 </div>
+                <label htmlFor="category-select" className="sr-only">Select Category</label>
                 <select
+                  id="category-select"
                   value={selectedCategory}
                   onChange={(e) => setSelectedCategory(e.target.value)}
                   className="bg-primary text-white rounded-lg px-4 py-2 text-sm focus:ring-accent focus:border-accent appearance-none"
@@ -497,7 +490,9 @@ export default function Dashboard({ onSignOut }) {
                     <option key={category} value={category}>{category}</option>
                   ))}
                 </select>
+                <label htmlFor="method-select" className="sr-only">Select Payment Method</label>
                 <select
+                  id="method-select"
                   value={selectedMethod}
                   onChange={(e) => setSelectedMethod(e.target.value)}
                   className="bg-primary text-white rounded-lg px-4 py-2 text-sm focus:ring-accent focus:border-accent appearance-none"
@@ -508,9 +503,9 @@ export default function Dashboard({ onSignOut }) {
                   ))}
                 </select>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
-                 {/* Quick Date Filters - adjusted for better layout */}
-                <div className="flex flex-col sm:flex-row gap-2">
+              <div className="flex flex-col md:flex-row gap-3 sm:gap-4">
+                {/* Quick Date Filters */}
+                <div className="flex gap-2 flex-grow">
                     <button
                         onClick={() => {
                         const todayDate = new Date();
@@ -534,6 +529,7 @@ export default function Dashboard({ onSignOut }) {
                         This Month
                     </button>
                 </div>
+                {/* Custom Date Range Filter */}
                 <DateRangeFilter
                   startDate={startDate}
                   endDate={endDate}
@@ -558,13 +554,12 @@ export default function Dashboard({ onSignOut }) {
                     Total Displayed: ₹{filteredExpenses.reduce((sum, e) => sum + (e.amount || 0), 0).toFixed(2)}
                   </p>
                 </div>
-                {/* Add New button here removed as it's in the header, can be re-added if desired for mobile */}
               </div>
 
               {refreshing && expenses.length === 0 ? (
                 <div className="text-center py-12 text-gray-400">Fetching your expenses...</div>
               ) : filteredExpenses.length > 0 ? (
-                <div className="space-y-3 sm:space-y-4 max-h-[50vh] sm:max-h-[60vh] overflow-y-auto pr-2"> {/* Added pr-2 for scrollbar space */}
+                <div className="space-y-3 sm:space-y-4 max-h-[50vh] sm:max-h-[60vh] overflow-y-auto pr-2">
                   {filteredExpenses.map((expense) => (
                     <ExpenseItem 
                       key={expense.id} 
@@ -601,7 +596,7 @@ export default function Dashboard({ onSignOut }) {
         <ExpenseForm
           user={user}
           expense={editingExpense}
-          onSuccess={handleExpenseFormSuccess} // Changed prop name for clarity
+          onSuccess={handleExpenseFormSuccess}
           onClose={() => {
             setShowExpenseForm(false);
             setEditingExpense(null);

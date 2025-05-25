@@ -96,3 +96,8 @@ button:active {
     font-size: 1.5rem;
   }
 }
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1) brightness(100%); /* Invert colors and ensure brightness */
+  cursor: pointer; /* Keep it clickable */
+}
