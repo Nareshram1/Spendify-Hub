@@ -1,66 +1,69 @@
+// components/AuthForm.jsx
 "use client";
-import { useState } from 'react'
-import { signInWithEmail, signUpWithEmail, resetPassword } from '../lib/auth'
+import { useState } from 'react';
+import { signInWithEmail, signUpWithEmail, resetPassword } from '../lib/auth';
 
 export default function AuthForm({ onAuthSuccess }) {
-  const [isLogin, setIsLogin] = useState(true)
-  const [isForgotPassword, setIsForgotPassword] = useState(false)
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')
-  const [showPassword, setShowPassword] = useState(false)
+  const [isLogin, setIsLogin] = useState(true);
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [username, setUsername] = useState(''); // New state for username
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
-    setLoading(true)
-    setError('')
-    setSuccess('')
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    setSuccess('');
 
     try {
       if (isForgotPassword) {
         // Handle password reset
-        const { error } = await resetPassword(email)
-        
+        const { error } = await resetPassword(email);
+
         if (error) {
-          setError(error.message)
+          setError(error.message);
         } else {
-          setSuccess('Password reset email sent! Check your inbox.')
+          setSuccess('Password reset email sent! Check your inbox.');
         }
       } else {
         // Handle login/signup
         const { data, error } = isLogin
           ? await signInWithEmail(email, password)
-          : await signUpWithEmail(email, password)
+          : await signUpWithEmail(email, password, username); // Pass username for signup
 
         if (error) {
-          setError(error.message)
+          setError(error.message);
         } else {
-          onAuthSuccess(data.user)
+          onAuthSuccess(data.user);
         }
       }
     } catch (err) {
-      setError('An unexpected error occurred')
+      setError('An unexpected error occurred');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleBackToLogin = () => {
-    setIsForgotPassword(false)
-    setError('')
-    setSuccess('')
-    setEmail('')
-  }
+    setIsForgotPassword(false);
+    setError('');
+    setSuccess('');
+    setEmail('');
+    setUsername(''); // Clear username on back to login
+  };
 
   const handleForgotPasswordClick = (e) => {
-    e.preventDefault()
-    setIsForgotPassword(true)
-    setError('')
-    setSuccess('')
-    setPassword('')
-  }
+    e.preventDefault();
+    setIsForgotPassword(true);
+    setError('');
+    setSuccess('');
+    setPassword('');
+  };
 
   return (
     <div className="min-h-screen bg-primary flex items-center justify-center px-4">
@@ -68,8 +71,8 @@ export default function AuthForm({ onAuthSuccess }) {
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-white mb-2">Spendify</h1>
           <p className="text-gray-400">
-            {isForgotPassword 
-              ? 'Reset your password' 
+            {isForgotPassword
+              ? 'Reset your password'
               : 'Track your expenses smartly'
             }
           </p>
@@ -89,6 +92,22 @@ export default function AuthForm({ onAuthSuccess }) {
               required
             />
           </div>
+
+          {!isLogin && !isForgotPassword && ( // Show username field only for signup
+            <div>
+              <label htmlFor="username" className="block text-sm font-medium text-gray-300 mb-2">
+                Username
+              </label>
+              <input
+                id="username"
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                className="w-full px-3 py-2 bg-primary border border-gray-600 rounded-md text-white focus:outline-none focus:border-accent"
+                required={!isLogin} // Require username only for signup
+              />
+            </div>
+          )}
 
           {!isForgotPassword && (
             <div>
@@ -156,7 +175,7 @@ export default function AuthForm({ onAuthSuccess }) {
           ) : (
             <>
               {isLogin && (
-                <button 
+                <button
                   onClick={handleForgotPasswordClick}
                   className="text-accent hover:text-accent/80 text-sm block mb-4"
                 >
@@ -164,7 +183,11 @@ export default function AuthForm({ onAuthSuccess }) {
                 </button>
               )}
               <button
-                onClick={() => setIsLogin(!isLogin)}
+                onClick={() => {
+                  setIsLogin(!isLogin);
+                  setError(''); // Clear errors when switching form type
+                  setSuccess(''); // Clear success when switching form type
+                }}
                 className="text-accent hover:text-accent/80 text-sm"
               >
                 {isLogin ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
@@ -174,5 +197,5 @@ export default function AuthForm({ onAuthSuccess }) {
         </div>
       </div>
     </div>
-  )
+  );
 }
