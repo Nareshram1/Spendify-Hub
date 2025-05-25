@@ -28,14 +28,14 @@ export default function RootLayout({ children }) {
         <meta name="format-detection" content="telephone=no" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="msapplication-config" content="/icons/browserconfig.xml" /> {/* Optional, for Edge */}
-        <meta name="msapplication-TileColor" content="#4A90E2" />
+        <meta name="msapplication-TileColor" content="#1A202C" />
         <meta name="msapplication-tap-highlight" content="no" />
-        <meta name="theme-color" content="#4A90E2" />
+        <meta name="theme-color" content="#1A202C" />
 
         {/* Recommended icon sizes for Apple devices */}
         <link rel="apple-touch-icon" href="/icons/icon-180x180.png" />
         {/* Example: for Safari pinned tabs, adjust color to your theme */}
-        <link rel="mask-icon" href="/icons/icon-192x192.png" color="#4A90E2" />
+        <link rel="mask-icon" href="/icons/icon-192x192.png" color="#1A202C" />
         <link rel="icon" href="/favicon.ico" />
         <link rel="manifest" href="/manifest.json" />
         {/* End PWA related tags */}
